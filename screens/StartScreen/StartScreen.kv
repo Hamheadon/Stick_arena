@@ -1,0 +1,51 @@
+#: set c_hint {"center": (.5, .5)}
+#: import partial functools.partial
+<StartScreen>:
+    name: "ss"
+    StickImage:
+        source: "assets/mains/bg.jpeg"
+
+    BoxLayout:
+        size_hint: .3, .3
+        pos_hint: c_hint
+        orientation: "vertical"
+        StickButton:
+            text: "Sign in"
+            master: root
+
+        StickButton:
+            text: "Sign up"
+            master: root
+            release_func: partial(root.raise_widget, "SignUpForm")
+        StickButton:
+            text: "How to play"
+            master: root
+
+<SignUpForm>:
+    pos_hint: {"center": (-1, .5)}
+    size_hint: .61, .77
+    DialogLay:
+        BoxLayout:
+            pos_hint: c_hint
+            size_hint: .64, .48
+            orientation: "vertical"
+            spacing: "12dp"
+            StickInput:
+                id: username
+                size_hint: 1, .11
+                hint_msg: "Username"
+            StickInput:
+                id: password
+                size_hint: 1, .11
+                hint_msg: "Password"
+            ColorPicker:
+                id: picker
+                size_hint: 1, .83
+        Button:
+            text: "Submit"
+            size_hint: .45, .17
+            pos_hint: {"center": (.5, .15)}
+            on_release: root.submit_form()
+
+
+

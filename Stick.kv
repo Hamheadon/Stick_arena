@@ -1,0 +1,45 @@
+#: set m "assets/mains/"
+
+<StickImage@Image>:
+    keep_ratio: False
+    allow_stretch: True
+
+<DialogLay@FloatLayout>:
+    StickImage:
+        size: self.parent.size
+        pos_hint: c_hint
+        source: m + "widget_tex.png"
+        allow_stretch: True
+        keep_ratio: False
+    Button:
+        id: exit
+        pos_hint: {"center": (.03, .98)}
+        background_normal: m + "x3.png"
+        background_down: m +"x3.png"
+        size_hint: None, None
+        width: 110
+        height: 110
+        on_release: root.parent.master.drop_widget(root.parent)
+
+<StickInput>:
+    canvas.after:
+        Color:
+            rgba: .1, .86, .46, 1
+        Line:
+            width: 2
+            rounded_rectangle: self.x, self.y, self.width, self.height, 3
+
+    background_color: 2/255, 4/255, 110/255, .9
+    foreground_color: .5, .5, .5, 1
+
+
+
+<StickManager>:
+    StartScreen:
+
+
+<ArenaPiece>:
+    StickImage:
+        source: self.source
+
+
