@@ -1,6 +1,6 @@
 import sys
 from threading import Thread
-
+from extra_functions import *
 from kivy.animation import Animation
 from kivy.core.window import Window
 from kivy.graphics import Ellipse
@@ -74,7 +74,25 @@ class CustomWidget(BoxLayout):
 
 class SignUpForm(CustomWidget):
     def submit_form(self, *args):
-        print("Submitted")
+        if self.ids.pwd.text != self.ids.conf_pwd.text:
+            self.ids.sign_up_status.text = "The passwords do not match"
+        elif not self.ids.username.text:
+            self.ids.sign_up_status.text = "Please enter a username!"
+        else:
+            self.ids.sign_up_status.text = "One second"
+            Thread(target=self.call_server, daemon=True).start()
+
+    def call_server(self, *args):
+        post_request = send_command(f"job:sign_up,name:{self.ids.username.text},password:{self.ids.pwd.text}")
+        if post_request == 200:
+            self.ids.sign_up_status.text = "Successfully signed up!"
+        else:
+            self.ids.sign_up_status.text = "The server is inactive right now"
+
+
+
+
+
 
 class StickButton(Button):
     master = None

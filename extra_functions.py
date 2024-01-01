@@ -1,6 +1,7 @@
 import socket
 import pyrebase
 
+HEADER_LENGTH = 64
 def connect_to_fire():
     firebaseConfig = {
         "apiKey": "AIzaSyCoCxbmJVfVd3ZgD5Mlozi5jDoW4t7_j-Q",
@@ -23,17 +24,36 @@ def grab_server_address():
 def connect_to_server():
     port = 8080
     HOST = grab_server_address()
+    if HOST == "inactive":
+        print("Server is inactive")
+        return 404
     ADDR = (HOST, port)
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect(ADDR)
-    return s
+    global server_socket
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.connect(ADDR)
+    return 200
 
 def send_command(msg):
     message = msg.encode("utf-8")
     msg_length = len(message)
     send_length = str(msg_length).encode("utf-8")
-    client = connect_to_server()
-    client.send(send_length)
-    client.send(message)
+    if not server_socket:
+        connection_attempt = connect_to_server()
+    else:
+        connection_attempt = 200
+    if connection_attempt == 200:
+        server_socket.send(send_length + (b" " * (HEADER_LENGTH - len(send_length))))
+        server_socket.send(message)
+    return connection_attempt
 
-send_command("Hello")
+
+server_socket = None
+"""
+curr_command = None
+while curr_command != "leave":
+    curr_command = input("Enter your command: ")
+    send_command(curr_command)
+
+print("Byee!")
+"""
+

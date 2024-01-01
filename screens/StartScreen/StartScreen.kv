@@ -26,25 +26,33 @@
     size_hint: .61, .77
     DialogLay:
         BoxLayout:
-            pos_hint: c_hint
-            size_hint: .64, .48
+            pos_hint: {"center": (.5, .64)}
+            size_hint: .64, .68
             orientation: "vertical"
             spacing: "12dp"
+            Label:
+                id: sign_up_status
+                text: "Enter your details"
+                size_hint: .97, .11
             StickInput:
                 id: username
                 size_hint: 1, .11
                 hint_msg: "Username"
             StickInput:
-                id: password
+                id: pwd
                 size_hint: 1, .11
                 hint_msg: "Password"
+            StickInput:
+                id: conf_pwd
+                size_hint: 1, .11
+                hint_msg: "Confirm Password"
             ColorPicker:
                 id: picker
                 size_hint: 1, .83
         Button:
             text: "Submit"
-            size_hint: .45, .17
-            pos_hint: {"center": (.5, .15)}
+            size_hint: .45, .11
+            pos_hint: {"center": (.5, .11)}
             on_release: root.submit_form()
 
 

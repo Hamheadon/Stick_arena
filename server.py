@@ -1,8 +1,10 @@
 import socket
+import threading
+import time
 from threading import Thread
 import pyrebase
 players_online = {}
-
+DISCONNECT_MESSAGE = "leave"
 
 def connect_to_fire():
     firebaseConfig = {
@@ -20,16 +22,36 @@ def connect_to_fire():
     db = firebase.database()
     return db
 
+def close_server():
+    command = ""
+    while command != "exit":
+        command = input("What to do?: ")
+    global server_is_active
+    connect_to_fire().update({"server_addr": "inactive"})
+    server_is_active = False
+    server.close()
+    print("Server closed, bye!")
+
 def handle_client(conn, addr, *args):
-    print(f"Connected by: {addr}")
     while True:
         data = conn.recv(HEADER).decode(FORMAT)
         if not data:
+            #print("No data")
+            time.sleep(.1)
             continue
         data_length = int(data)
         actual_data = conn.recv(data_length).decode(FORMAT)
+        if actual_data == DISCONNECT_MESSAGE:
+            break
+        command_info = dict([command_pair.split(":") for command_pair in actual_data.split(",")])
+        required_job = globals()[command_info.pop("job")]
+        thread = threading.Thread(target=required_job, args=(command_info,))
+        thread.start()
 
-        # "job:sign_up/name:josh,password:cross,status:signup"
+        print(f"[Data] {command_info}")
+
+    print(f"finished serving {conn}")
+        # "job:sign_up,name:josh,password:cross,status:signup"
 
 def sign_up(creds: dict):
     print(f"{creds['name']} has become one of us")
@@ -59,8 +81,13 @@ connect_to_fire().update({"server_addr": socket.gethostbyname(socket.gethostname
 print("Server has started")
 while server_is_active:
     conn, addr = server.accept()
+    if not server_is_active:
+        break
     thread = Thread(target=handle_client, args=(conn, addr))
     thread.start()
-    print(f"Connected received by: {addr}")
+    server_closer = Thread(target=close_server)
+    server_closer.start()
+    print(f"Connected received by: {addr} \n")
 
+print("Server is closed finally")
 
