@@ -83,8 +83,9 @@ class SignUpForm(CustomWidget):
             Thread(target=self.call_server, daemon=True).start()
 
     def call_server(self, *args):
-        post_request = send_command(f"job:sign_up,name:{self.ids.username.text},password:{self.ids.pwd.text}")
-        if post_request == 200:
+        post_request = send_command(f"job:sign_up,name:{self.ids.username.text},password:{self.ids.pwd.text}",
+                                    True, dict)
+        if type(post_request) is tuple:
             self.ids.sign_up_status.text = "Successfully signed up!"
         else:
             self.ids.sign_up_status.text = "The server is inactive right now"
@@ -162,9 +163,6 @@ class ArenaPiece(FloatLayout):
         self.source = source
         self.config = arena_piece_configs[self.source.split("/")[-1]]
         self.inited = False
-
-
-
 
 
     def on_size(self, *args):

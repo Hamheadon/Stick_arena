@@ -1,9 +1,12 @@
+import json
+import pickle
 import socket
 import threading
 import time
 from threading import Thread
 import pyrebase
 players_online = {}
+active_games = []
 DISCONNECT_MESSAGE = "leave"
 
 def connect_to_fire():
@@ -33,7 +36,10 @@ def close_server():
     print("Server closed, bye!")
 
 def handle_client(conn, addr, *args):
+    # jobs_data holds all the required data dictionaries for all the assigned job_funcs
+    jobs_data = {}
     while True:
+        print(f"Currently serving {addr}")
         data = conn.recv(HEADER).decode(FORMAT)
         if not data:
             #print("No data")
@@ -43,18 +49,42 @@ def handle_client(conn, addr, *args):
         actual_data = conn.recv(data_length).decode(FORMAT)
         if actual_data == DISCONNECT_MESSAGE:
             break
-        command_info = dict([command_pair.split(":") for command_pair in actual_data.split(",")])
-        required_job = globals()[command_info.pop("job")]
-        thread = threading.Thread(target=required_job, args=(command_info,))
+        command_info = dict([command_pair.split(":") for command_pair in actual_data.split(",")])  # the data user has sent to us
+        job = command_info.pop("job")
+        job_func = globals()[job]  # job_func is the received function (found via the string held by job variable) the user wants us to serve them with
+        command_info.update({"still_connected": True})
+        jobs_data[job] = command_info
+        thread = threading.Thread(target=job_func, args=(command_info, conn, addr))
         thread.start()
-
         print(f"[Data] {command_info}")
 
+    for val in jobs_data.values():
+        val["still_connected"] = False
+    conn.close()
     print(f"finished serving {conn}")
         # "job:sign_up,name:josh,password:cross,status:signup"
 
-def sign_up(creds: dict):
+def sign_up(creds: dict, conn: socket.socket, addr=None, *args):
     print(f"{creds['name']} has become one of us")
+    current_players = None
+    with open("players.json", "r") as players_file:
+        current_players = json.load(players_file)
+    fresh_stats = {creds["name"]: {"kills": 0, "deaths": 0, "wins": 0, "losses": 0, "win_rate": 0,
+                                            "spinners": []}}
+    current_players.append(fresh_stats)
+    with open("players.json", "w") as players_file:
+        json.dump(current_players, players_file)
+    players_online[creds["name"]] = fresh_stats
+
+
+    while creds["still_connected"]:
+        lobby_data = pickle.dumps({"players": players_online, "games": active_games})
+        data_length = len(lobby_data)
+        conn.send((b" " * (HEADER - data_length)) + lobby_data)
+        conn.send(lobby_data)
+        time.sleep(1.5)
+
+
 
 def sign_in(creds: dict):
     print(f"{creds['name']} has joined the lobby")
