@@ -6,7 +6,7 @@ from kivy.core.window import Window
 from kivy.graphics import Ellipse
 from kivy.graphics import Line
 from kivy.lang import Builder
-from kivy.properties import StringProperty
+from kivy.properties import StringProperty, Clock
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.floatlayout import FloatLayout
@@ -64,12 +64,40 @@ class CustomWidget(BoxLayout):
         self.inited = False
         self.master = master
         self.on_size_funcs = []
+        self.clock_vars = {}
 
     def on_size(self, *args):
         if not self.inited:
             for func in self.on_size_funcs:
                 func()
             self.inited = True
+
+    def command_future_clock(self, params: dict):
+        """
+        fail_msgs: a dict containing fail message-description pairs to display if the clock var is set to something
+        else.
+        fail_wid: the widget, preferably a label, to display the selected fail message
+
+        :param params: funcs_array, clock_var, completion_var, fail_msgs (optional), fail_wid - same context as fail_msg
+        :return:
+        """
+        self.clock_vars[params["clock_var"]] = [params["completion_var"], "neutral"]
+
+        def clock_subprocess(*args):
+            if self.clock_vars[params["clock_var"]][0] == self.clock_vars[params["clock_var"]][1]:
+                for func in params["funcs_array"]:
+                    func()
+                Clock.unschedule(clock_subprocess)
+            elif self.clock_vars[params["clock_var"]][1] != "neutral":
+                Clock.unschedule(clock_subprocess)
+                if "fail_msgs" in params:
+                    params["fail_wid"].text = params["fail_msgs"]
+
+            print("Clock sub Still waiting")
+        Clock.schedule_interval(clock_subprocess, .2)
+
+    def set_clock_watch_var(self, var, val):
+        self.clock_vars[var][1] = val
 
 
 class SignUpForm(CustomWidget):
@@ -80,15 +108,27 @@ class SignUpForm(CustomWidget):
             self.ids.sign_up_status.text = "Please enter a username!"
         else:
             self.ids.sign_up_status.text = "One second"
+            self.command_future_clock({"funcs_array": [lambda: app_pointer[0].set_current_screen("ls")],
+                                       "clock_var": "load_status",
+                                       "completion_var": "loaded",
+                                       "fail_msgs": "Whoops, a non-obvious problem occurred",
+                                       "fail_wid": self.ids.sign_up_status})
             Thread(target=self.call_server, daemon=True).start()
 
+
     def call_server(self, *args):
-        post_request = send_command(f"job:sign_up,name:{self.ids.username.text},password:{self.ids.pwd.text}",
-                                    True, dict)
-        if type(post_request) is tuple:
-            self.ids.sign_up_status.text = "Successfully signed up!"
-        else:
-            self.ids.sign_up_status.text = "The server is inactive right now"
+        try:
+            post_request = send_command(f"job:sign_up,name:{self.ids.username.text},password:{self.ids.pwd.text}",
+                                        True, dict)
+            if type(post_request) is tuple:
+                self.ids.sign_up_status.text = "Successfully signed up!"
+                self.set_clock_watch_var("load_status", "loaded")
+                app_pointer[0].set_current_screen("ls")
+            else:
+                self.ids.sign_up_status.text = "The server is inactive right now"
+        except Exception as e:
+            print(e)
+            self.set_clock_watch_var("load_status", "fail")
 
 
 

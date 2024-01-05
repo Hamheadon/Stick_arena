@@ -1,4 +1,5 @@
 import json
+import os.path
 import pickle
 import socket
 import threading
@@ -66,12 +67,13 @@ def handle_client(conn, addr, *args):
 
 def sign_up(creds: dict, conn: socket.socket, addr=None, *args):
     print(f"{creds['name']} has become one of us")
-    current_players = None
-    with open("players.json", "r") as players_file:
-        current_players = json.load(players_file)
-    fresh_stats = {creds["name"]: {"kills": 0, "deaths": 0, "wins": 0, "losses": 0, "win_rate": 0,
-                                            "spinners": []}}
-    current_players.append(fresh_stats)
+    current_players = {}
+    if os.path.exists("players.json"):
+        with open("players.json", "r") as players_file:
+            current_players = json.load(players_file)
+    fresh_stats = {"kills": 0, "deaths": 0, "wins": 0, "losses": 0, "win_rate": 0,
+                                            "spinners": []}
+    current_players.update({creds["name"]: fresh_stats})
     with open("players.json", "w") as players_file:
         json.dump(current_players, players_file)
     players_online[creds["name"]] = fresh_stats
@@ -80,7 +82,8 @@ def sign_up(creds: dict, conn: socket.socket, addr=None, *args):
     while creds["still_connected"]:
         lobby_data = pickle.dumps({"players": players_online, "games": active_games})
         data_length = len(lobby_data)
-        conn.send((b" " * (HEADER - data_length)) + lobby_data)
+        send_length = str(data_length).encode(FORMAT)
+        conn.send(send_length + (b" " * (HEADER - len(send_length))))
         conn.send(lobby_data)
         time.sleep(1.5)
 

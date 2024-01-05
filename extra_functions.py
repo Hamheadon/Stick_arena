@@ -1,10 +1,14 @@
 import pickle
 import socket
+import time
+
 import pyrebase
 
 HEADER_LENGTH = 64
 active_players = {}
 encode_format = "utf-8"
+logged_in = True
+app_pointer = [None]
 def connect_to_fire():
     firebaseConfig = {
         "apiKey": "AIzaSyCoCxbmJVfVd3ZgD5Mlozi5jDoW4t7_j-Q",
@@ -48,19 +52,36 @@ def send_command(msg, needs_response=False, response_type=str):
         server_socket.send(send_length + (b" " * (HEADER_LENGTH - len(send_length))))
         server_socket.send(message)
         if needs_response:
-            actual_response_data = None
-            first_response = server_socket.recv(HEADER_LENGTH).decode(encode_format)
-            if first_response:
-                actual_response_data = server_socket.recv(int(first_response))
-            else:
-                second_response = int(server_socket.recv(HEADER_LENGTH).decode(encode_format))
-                actual_response_data = server_socket.recv(int(second_response))
-            if response_type is str:
-                actual_response_data = server_socket.recv(second_response).decode(encode_format)
-            else:
-                actual_response_data = pickle.loads(server_socket.recv(int(first_response)))
-            return 200, actual_response_data
+            return 200, get_response(server_socket, False, response_type)
     return connection_attempt
+
+def get_response(data_socket: socket.socket, continuous_response=False, response_type=str,
+                 holding_obj=None, data_attr_name=None):
+    def handle_response():
+        actual_response_data = None
+        first_response = server_socket.recv(HEADER_LENGTH)
+        if first_response:
+            print(f"first_response: {first_response}")
+            actual_response_data = data_socket.recv(int(first_response.decode(encode_format)))
+        else:
+            second_response = int(data_socket.recv(HEADER_LENGTH).decode(encode_format))
+            actual_response_data = data_socket.recv(int(second_response))
+        if response_type is str:
+            actual_response_data = actual_response_data.decode(encode_format)
+        else:
+            actual_response_data = pickle.loads(actual_response_data)
+        return actual_response_data
+
+    if continuous_response:
+        while logged_in:
+            setattr(holding_obj, data_attr_name, handle_response())
+            time.sleep(1.5)
+    else:
+        if not holding_obj:
+            return handle_response()
+
+        setattr(holding_obj, data_attr_name, handle_response())
+
 
 
 server_socket = None

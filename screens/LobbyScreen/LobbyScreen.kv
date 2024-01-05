@@ -1,0 +1,44 @@
+#: import img kivy.core.image.Image
+<LobbyScreen>:
+    name: "ls"
+    BoxLayout:
+        orientation: "vertical"
+        BoxLayout:
+            orientation: "horizontal"
+            size_hint: 1, .05
+            Button:
+                text: "lobby"
+            Button:
+                text: "Profile"
+            Button:
+                text: "Shop"
+            Button:
+                text: "Map editor"
+        BoxLayout:
+            size_hint: 1, .64
+            orientation: "horizontal"
+            ScrollView:
+                canvas.before:
+                    Color:
+                        rgba: 1, 1, 1, 1
+                    Rectangle:
+                        size: self.size
+                        pos: self.pos
+                        texture: img("assets/mains/lobby_bg.jpg").texture
+                size_hint: .69, 1
+                do_scroll_y: True
+                GridLayout:
+                    cols: 1
+                    height: self.minimum_height
+                    size_hint_y: None
+                    row_default_height: self.parent.height
+
+            BoxLayout:
+                size_hint: .31, 1
+                orientation: "vertical"
+                Button:
+                Button:
+
+        BoxLayout:
+            orientation: "horizontal"
+            size_hint: 1, .31

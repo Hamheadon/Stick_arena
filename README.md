@@ -1,2 +1,2 @@
 # Stick_arena
-A game with stickmen
+A game involving stickmen fighting

@@ -1,9 +1,10 @@
 from kivy.app import App
 from kivy.lang import Builder
+from kivy.uix.gridlayout import GridLayout
 from kivy.uix.screenmanager import ScreenManager
 from screens import *
 from screens.screen import screen_dict
-
+from customs import app_pointer
 
 class StickManager(ScreenManager):
     pass
@@ -24,8 +25,13 @@ class StickApp(App):
         if switch:
             self.root.current = name
 
+    def on_stop(self):
+        from extra_functions import server_socket, send_command
+        if server_socket:
+            send_command("leave")
 
-app = StickApp(title='Stick Arena')
+
+app_pointer[0] = StickApp(title='Stick Arena')
 
 if __name__ == '__main__':
-    app.run()
+    app_pointer[0].run()
