@@ -15,6 +15,7 @@ from kivy.uix.image import Image
 from kivy.uix.screenmanager import Screen
 from kivy.uix.textinput import TextInput
 from kivy.uix.widget import Widget
+from kivy.core.window import Window
 
 Builder.load_file("Stick.kv")
 
@@ -159,16 +160,29 @@ class StickButton(Button):
             return
         print("releasing")
         super().on_release()
+
+
+class StickImage(Image):
+    pass
+
 class StickScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.current_active_widget = None
+        self.extra_on_size_funcs = []
+        self.inited = False
 
     def drop_widget(self, *args):
         def nullify(*args):
             self.current_active_widget = None
         if self.current_active_widget:
             drop_anim(self.current_active_widget, on_complete=nullify)
+
+    def on_size(self, *args):
+        if not self.inited:
+            for func in self.extra_on_size_funcs:
+                func()
+            self.inited = True
 
     def raise_widget(self, class_name: str, direction="left", *args):
         widget_class = str_to_class(class_name)
@@ -212,32 +226,65 @@ class ArenaPiece(FloatLayout):
 
 
 class RoundManager:
-    def __init__(self, map):
+    def __init__(self, map, repeat=True):
         self.map = map
+        self.master = None
         self.players = []
+        self.repeat = repeat
         self.players_scores = {}
+        self.current_arena = None
 
     def set_up_round(self):
-        pass
+        def sub(*args):
+            self.master = app_pointer[0].root.screens[-1]
+            self.current_arena = Arena(self.map)
+            self.master.add_widget(self.current_arena)
+            self.current_arena.pos_hint = {"center": (.5, .5)}
+        Clock.schedule_once(sub, 1)
 
 
     def finish_round(self):
         pass
 
-class Arena(GridLayout, CustomWidget):
-    def __init__(self, dimensions, *args, **kwargs):
+class Arena(GridLayout):
+    def __init__(self, dimensions_path, *args, **kwargs):
         # pos_hint will always be .5, .5 to center
         super().__init__()
-        self.dimension_strings = dimensions
-        self.cols = len(self.dimension_strings)
+        self.dimensions = dimensions_path
         self.arena_pieces = []
         self.blocking_pieces = []
+        self.inited = False
         self.player_trace_line = None
         self.collision_equation: str = ""
         #TODO find size_hint from uniform length of dim_strings(width) and length of DS array(height)
 
     def set_up_dims(self):
-        pass
+        self.size_hint = .15, .15
+        initial_size_hint_y = self.size_hint_y
+        arena_format = None
+        with open(self.dimensions, "r") as dimensions_file:
+            arena_format = dimensions_file.readlines()
+        arena_name = arena_format.pop(0).replace("\n", "")
+        self.cols = len(arena_format[0].replace(",", "").replace("\n", ""))
+        self.size_hint_x *= self.cols
+        for i in arena_format:
+            stripped = i.replace("\n", "")
+            piece_row = stripped.split(",")
+            for piece_name in piece_row:
+                if piece_name == "0":
+                    self.add_widget(StickImage(source=f"assets/mains/trans.png"))
+                else:
+                    self.add_widget(StickImage(source=f"assets/{arena_name}/{piece_name}.png"))
+            self.size_hint_y += initial_size_hint_y
+
+    def on_size(self, *args):
+        if not self.inited:
+            self.set_up_dims()
+            self.inited = True
+
+
+
+
 
     def check_collision(self):
         def _check_collision(*args):

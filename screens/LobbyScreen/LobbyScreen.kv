@@ -1,4 +1,6 @@
 #: import img kivy.core.image.Image
+#: import partial functools.partial
+#: set c_hint {"center": (.5, .5)}
 <LobbyScreen>:
     name: "ls"
     BoxLayout:
@@ -42,3 +44,17 @@
         BoxLayout:
             orientation: "horizontal"
             size_hint: 1, .31
+            BoxLayout:
+                size_hint: .69, 1
+                BoxLayout:
+                BoxLayout:
+            FloatLayout:
+                id: game_options
+                size_hint: .31, 1
+                BoxLayout:
+                    pos_hint: c_hint
+                    size_hint: .73, .73
+                    StickButton:
+                        text: "New Game"
+                        release_func: partial(root.start_game, "HQ")
+
