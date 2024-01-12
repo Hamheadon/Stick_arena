@@ -1,5 +1,5 @@
 #: set m "assets/mains/"
-
+#: set c_hint {"center": (.5, .5)}
 <StickImage>:
     keep_ratio: False
     allow_stretch: True
@@ -20,6 +20,7 @@
         width: 110
         height: 110
         on_release: root.parent.master.drop_widget(root.parent)
+
 
 <StickInput>:
     canvas.after:

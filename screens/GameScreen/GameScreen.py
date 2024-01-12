@@ -2,4 +2,6 @@ from customs import *
 
 
 class GameScreen(StickScreen):
-    pass
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.player = None

@@ -1,6 +1,14 @@
 #: import img kivy.core.image.Image
 #: import partial functools.partial
 #: set c_hint {"center": (.5, .5)}
+
+<Player>:
+    StickImage:
+        pos_hint: c_hint
+        id: body
+        size_hint_y: .5
+        source: "assets/mains/sprite.png"
+
 <LobbyScreen>:
     name: "ls"
     BoxLayout:

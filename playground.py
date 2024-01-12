@@ -1,25 +1,22 @@
 from kivy.app import App
-from kivy.graphics import Line
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.button import Button
-from kivy.uix.textinput import TextInput
+from kivy.uix.label import Label
+from kivy.core.window import Window
 
 
-
-class MyTextInput(TextInput):
-    def on_focus(self, instance, value):
-        if value:  # When TextInput is focused
-            self.hint_text = ''  # Clear hint_text
-
-
-class MyApp(App):
+class MultiKeyApp(App):
     def build(self):
-        b = BoxLayout(orientation='vertical')
-        text_input = MyTextInput(hint_text='Enter text...')
-        b.add_widget(text_input)
-        b.add_widget(Button(text='Click'))
-        return b
+        self.label = Label(text="Press two keys simultaneously", font_size=20)
+        Window.bind(on_key_down=self.on_key_down, on_key_up=self.on_key_up)
+        return self.label
+
+    def on_key_down(self, instance, keyboard, keycode, text, modifiers):
+        self.label.text = f"Keys down: {text} | Modifiers: {keycode}"
+        print(f"Keys down: {text} and keycode: {keycode}")
+
+    def on_key_up(self, instance, keyboard, keycode):
+        print(f"keycode: {keycode}")
+        self.label.text = "Press two keys simultaneously"
 
 
 if __name__ == '__main__':
-    MyApp().run()
+    MultiKeyApp().run()

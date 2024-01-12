@@ -1,3 +1,4 @@
+import json
 import pickle
 import socket
 import time
@@ -6,9 +7,13 @@ import pyrebase
 
 HEADER_LENGTH = 64
 active_players = {}
+DATA_FILE = "extra_data.json"
 encode_format = "utf-8"
 logged_in = True
 app_pointer = [None]
+extra_data = {"arrow_key_codes": {}}
+login_data = {}
+
 def connect_to_fire():
     firebaseConfig = {
         "apiKey": "AIzaSyCoCxbmJVfVd3ZgD5Mlozi5jDoW4t7_j-Q",
@@ -40,6 +45,11 @@ def connect_to_server():
     server_socket.connect(ADDR)
     return 200
 
+def save_data():
+    with open(DATA_FILE, "w") as stored_data_file:
+        json.dump(extra_data, stored_data_file)
+
+
 def send_command(msg, needs_response=False, response_type=str):
     message = msg.encode("utf-8")
     msg_length = len(message)
@@ -57,6 +67,15 @@ def send_command(msg, needs_response=False, response_type=str):
 
 def get_response(data_socket: socket.socket, continuous_response=False, response_type=str,
                  holding_obj=None, data_attr_name=None):
+    """
+
+    :param data_socket:
+    :param continuous_response:
+    :param response_type:
+    :param holding_obj: the object (optional) of which to store the response in its attribute given by 'data_attr_name'
+    :param data_attr_name:
+    :return:
+    """
     def handle_response():
         actual_response_data = None
         first_response = server_socket.recv(HEADER_LENGTH)

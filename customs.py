@@ -1,9 +1,15 @@
+import json
+import random
 import sys
+from math import tan, degrees, atan2
 from threading import Thread
+
+from kivy.uix.label import Label
+
 from extra_functions import *
 from kivy.animation import Animation
 from kivy.core.window import Window
-from kivy.graphics import Ellipse
+from kivy.graphics import Ellipse, Rotate, PushMatrix, PopMatrix
 from kivy.graphics import Line
 from kivy.lang import Builder
 from kivy.properties import StringProperty, Clock
@@ -18,7 +24,7 @@ from kivy.uix.widget import Widget
 from kivy.core.window import Window
 
 Builder.load_file("Stick.kv")
-
+arrow_keys_configured = [False]
 arena_piece_configs = {"hq48.png": (0, 0)}
 
 
@@ -171,12 +177,16 @@ class StickScreen(Screen):
         self.current_active_widget = None
         self.extra_on_size_funcs = []
         self.inited = False
+        self.collected_arrow_key_codes = []
+        self.config_func = None
 
     def drop_widget(self, *args):
         def nullify(*args):
+            self.remove_widget(self.current_active_widget)
             self.current_active_widget = None
         if self.current_active_widget:
             drop_anim(self.current_active_widget, on_complete=nullify)
+
 
     def on_size(self, *args):
         if not self.inited:
@@ -192,18 +202,47 @@ class StickScreen(Screen):
         self.add_widget(self.current_active_widget)
         raise_anim(self.current_active_widget)
 
+    def show_arrows_config_prompt(self):
+        self.current_active_widget = FloatLayout()
+        bg = StickImage(source="assets/mains/wp.jpeg")
+        config_msg = Label(text="Press your arrow keys in this order: left, up, right, down",
+                           halign="center", valign="center", color=(1, 1, 1, 1))
+        self.current_active_widget.add_widget(bg)
+        self.current_active_widget.add_widget(config_msg)
+        self.add_widget(self.current_active_widget)
+        self.config_func = self.arrow_keys_config_listener
+        Window.bind(on_key_down=self.config_func)
+
+    def arrow_keys_config_listener(self, *args):
+        print("Listening...")
+        self.collected_arrow_key_codes.append(args[2])
+        self.current_active_widget.children[0].text = random.choice(("And the next...", "Keep going"))
+
+        if len(self.collected_arrow_key_codes) >= 4:
+            Window.unbind(on_key_down=self.config_func)
+            extra_data["arrow_key_codes"]["left"] = self.collected_arrow_key_codes[0]
+            extra_data["arrow_key_codes"]["up"] = self.collected_arrow_key_codes[1]
+            extra_data["arrow_key_codes"]["right"] = self.collected_arrow_key_codes[2]
+            extra_data["arrow_key_codes"]["down"] = self.collected_arrow_key_codes[3]
+            self.drop_widget()
+            print("Finished")
 
 
 
-class Player(Ellipse):
-    def __init__(self, *args, **kwargs):
+
+
+class Player(FloatLayout):
+    def __init__(self, name, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.health = 100
         self.arena_pos = 0, 0
-        self.speed = 5
+        self.name = name
+        self.speed = 15
+        self.source = "assets/mains/sprite.png"
+        self.size_hint = .26, .26
 
     def on_size(self, width, height):
-        self.size = (width * .08, height * .08)
+        pass
 
     def move(self):
         pass
@@ -226,13 +265,20 @@ class ArenaPiece(FloatLayout):
 
 
 class RoundManager:
-    def __init__(self, map, repeat=True):
+    def __init__(self, map, repeat=True, starting_player: Player = False):
+        self.bind_func = None
+        self.is_new = True
         self.map = map
         self.master = None
+        self.new_data_funcs = []
+        self.own_player = None
         self.players = []
         self.repeat = repeat
+        self.rotate_func = self.rotate_player
+        self.angle = 0
         self.players_scores = {}
         self.current_arena = None
+        self.angle = 0
 
     def set_up_round(self):
         def sub(*args):
@@ -240,19 +286,59 @@ class RoundManager:
             self.current_arena = Arena(self.map)
             self.master.add_widget(self.current_arena)
             self.current_arena.pos_hint = {"center": (.5, .5)}
-        Clock.schedule_once(sub, 1)
+        def _spawn(dt):
+            for player in self.players:
+                self.current_arena.spawn_player(player)
+
+            self.current_arena.spawn_player(app_pointer[0].root.screens[-1].player)
+            self.bind_func = self.current_arena.move_player
+            Window.bind(on_key_down=self.bind_func)
+            Window.bind(on_motion=self.rotate_func)
+
+
+        Clock.schedule_once(sub, .8)
+        Clock.schedule_once(_spawn, 1.3)
 
 
     def finish_round(self):
         pass
 
-class Arena(GridLayout):
+    def listen_for_round_data(self, *args):
+        new_data = get_response(server_socket, True, dict)
+        for func in self.new_data_funcs:
+            func()
+            self.new_data_funcs.remove(func)
+
+    def rotate_player(self, *args):
+        player = app_pointer[0].root.screens[-1].player.ids.body
+        cursor_x, cursor_y = player.to_widget(*Window.mouse_pos) #random screen for tw
+        center_x, center_y = player.center
+
+        angle = degrees(atan2(cursor_y - center_y, cursor_x - center_x))
+        new_angle = angle - self.angle
+        self.angle = angle
+        with player.canvas.before:
+            PushMatrix()
+            Rotate(angle=new_angle, origin=player.center)
+        with player.canvas.after:
+            PopMatrix()
+
+
+    def add_player(self, player: Player, is_my_player=False):
+        self.players.append(player)
+        if is_my_player:
+            self.own_player = player
+        self.current_arena.spawn_player(player)
+
+class Arena(FloatLayout):
     def __init__(self, dimensions_path, *args, **kwargs):
         # pos_hint will always be .5, .5 to center
         super().__init__()
         self.dimensions = dimensions_path
         self.arena_pieces = []
+        self.arena_grid = GridLayout()
         self.blocking_pieces = []
+        self.arena_info = None
         self.inited = False
         self.player_trace_line = None
         self.collision_equation: str = ""
@@ -260,22 +346,55 @@ class Arena(GridLayout):
 
     def set_up_dims(self):
         self.size_hint = .15, .15
+        self.pos_hint = {"center": (.5, .5)}
+        self.add_widget(self.arena_grid)
         initial_size_hint_y = self.size_hint_y
-        arena_format = None
-        with open(self.dimensions, "r") as dimensions_file:
-            arena_format = dimensions_file.readlines()
-        arena_name = arena_format.pop(0).replace("\n", "")
-        self.cols = len(arena_format[0].replace(",", "").replace("\n", ""))
-        self.size_hint_x *= self.cols
-        for i in arena_format:
+        with open("maps.json", "r") as dimensions_file:
+            self.arena_info = json.load(dimensions_file)[self.dimensions]
+
+        self.arena_grid.size_hint = 1, 1
+        derived_rows = len(self.arena_info['dimensions'][0].split(","))
+
+        self.arena_grid.cols = derived_rows
+        self.size_hint_x *= self.arena_grid.cols
+        for i in self.arena_info["dimensions"]:
             stripped = i.replace("\n", "")
             piece_row = stripped.split(",")
             for piece_name in piece_row:
                 if piece_name == "0":
-                    self.add_widget(StickImage(source=f"assets/mains/trans.png"))
+                    self.arena_grid.add_widget(StickImage(source=f"assets/mains/trans.png"))
                 else:
-                    self.add_widget(StickImage(source=f"assets/{arena_name}/{piece_name}.png"))
+                    self.arena_grid.add_widget(StickImage(source=f"assets/{self.dimensions}/{piece_name}.png"))
             self.size_hint_y += initial_size_hint_y
+
+
+        def set_center(dt):
+            self.arena_grid.center = self.center
+
+        Clock.schedule_once(set_center, .1)
+    def spawn_player(self, player):
+
+        spawn_point = random.choice(self.arena_info["spawn_positions"])
+        spawn_pos = list(self.arena_grid.children[spawn_point].pos)
+        self.add_widget(player)
+        player.pos = spawn_pos
+
+
+    def move_player(self, *args):
+        #self.arena_grid.pos_hint = None
+
+
+        # Use while loop to coninue manipulating poses and sleeping for FPS
+        code = args[2]
+        if code == extra_data["arrow_key_codes"]["left"]:
+            self.arena_grid.x += self.parent.player.speed
+        elif code == extra_data["arrow_key_codes"]["up"]:
+            self.arena_grid.y -= self.parent.player.speed
+        elif code == extra_data["arrow_key_codes"]["right"]:
+            self.arena_grid.x -= self.parent.player.speed
+        elif code == extra_data["arrow_key_codes"]["down"]:
+            self.arena_grid.y += self.parent.player.speed
+
 
     def on_size(self, *args):
         if not self.inited:

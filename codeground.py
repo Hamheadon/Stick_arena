@@ -1,2 +1,2 @@
-x = "{x:4}"
-print(dict(x))
+x = bool({"j": "w"})
+print(x)

@@ -11,5 +11,6 @@ class LobbyScreen(StickScreen):
 
     def start_game(self, *args):
         app_pointer[0].set_current_screen("gs")
-        self.arena_manager = RoundManager("hamster_arena.txt")
+        app_pointer[0].root.screens[-1].player = Player(name="hammed")
+        self.arena_manager = RoundManager("hamsterdam")
         self.arena_manager.set_up_round()
