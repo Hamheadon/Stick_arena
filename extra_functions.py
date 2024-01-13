@@ -6,6 +6,7 @@ import time
 import pyrebase
 
 HEADER_LENGTH = 64
+FPS = 1/60
 active_players = {}
 DATA_FILE = "extra_data.json"
 encode_format = "utf-8"

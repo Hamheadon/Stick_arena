@@ -1,6 +1,7 @@
 import json
 import random
 import sys
+import time
 from math import tan, degrees, atan2
 from threading import Thread
 
@@ -237,9 +238,9 @@ class Player(FloatLayout):
         self.health = 100
         self.arena_pos = 0, 0
         self.name = name
-        self.speed = 15
+        self.speed = 7
         self.source = "assets/mains/sprite.png"
-        self.size_hint = .26, .26
+        self.size_hint = .11, .22
 
     def on_size(self, width, height):
         pass
@@ -275,15 +276,17 @@ class RoundManager:
         self.players = []
         self.repeat = repeat
         self.rotate_func = self.rotate_player
+        self.keyboard_release_func = None
         self.angle = 0
         self.players_scores = {}
         self.current_arena = None
         self.angle = 0
 
+
     def set_up_round(self):
         def sub(*args):
             self.master = app_pointer[0].root.screens[-1]
-            self.current_arena = Arena(self.map)
+            self.current_arena = Arena(self, self.map)
             self.master.add_widget(self.current_arena)
             self.current_arena.pos_hint = {"center": (.5, .5)}
         def _spawn(dt):
@@ -292,8 +295,11 @@ class RoundManager:
 
             self.current_arena.spawn_player(app_pointer[0].root.screens[-1].player)
             self.bind_func = self.current_arena.move_player
+            self.keyboard_release_func = self.current_arena.stop_movement
             Window.bind(on_key_down=self.bind_func)
+            Window.bind(on_key_up=self.keyboard_release_func)
             Window.bind(on_motion=self.rotate_func)
+
 
 
         Clock.schedule_once(sub, .8)
@@ -331,13 +337,15 @@ class RoundManager:
         self.current_arena.spawn_player(player)
 
 class Arena(FloatLayout):
-    def __init__(self, dimensions_path, *args, **kwargs):
+    def __init__(self, master, dimensions_path, *args, **kwargs):
         # pos_hint will always be .5, .5 to center
         super().__init__()
         self.dimensions = dimensions_path
+        self.master = master
         self.arena_pieces = []
         self.arena_grid = GridLayout()
         self.blocking_pieces = []
+        self.pressed_btns = []
         self.arena_info = None
         self.inited = False
         self.player_trace_line = None
@@ -374,26 +382,44 @@ class Arena(FloatLayout):
         Clock.schedule_once(set_center, .1)
     def spawn_player(self, player):
 
-        spawn_point = random.choice(self.arena_info["spawn_positions"])
+        spawn_point = self.arena_info["spawn_positions"][0]
         spawn_pos = list(self.arena_grid.children[spawn_point].pos)
-        self.add_widget(player)
-        player.pos = spawn_pos
+        player.pos_hint = {"center": (.5, .5)}
+        self.parent.add_widget(player)
+        self.pos = spawn_pos
+
+    def movement_tracker(self, code, *args):
+        while self.pressed_btns:
+            if extra_data["arrow_key_codes"]["left"] in self.pressed_btns:
+                if self.parent.player.x >= self.arena_grid.x:
+                    self.arena_grid.x += self.parent.player.speed
+            if extra_data["arrow_key_codes"]["up"] in self.pressed_btns:
+                if self.parent.player.y + self.parent.player.height <= self.arena_grid.y + self.arena_grid.height:
+                    self.arena_grid.y -= self.parent.player.speed
+            if extra_data["arrow_key_codes"]["right"] in self.pressed_btns:
+                if self.parent.player.x + self.parent.player.width <= self.arena_grid.x + self.arena_grid.width:
+                    self.arena_grid.x -= self.parent.player.speed
+            if extra_data["arrow_key_codes"]["down"] in self.pressed_btns:
+                if self.parent.player.y >= self.arena_grid.y:
+                    self.arena_grid.y += self.parent.player.speed
+            time.sleep(FPS)
 
 
     def move_player(self, *args):
-        #self.arena_grid.pos_hint = None
-
-
-        # Use while loop to coninue manipulating poses and sleeping for FPS
         code = args[2]
-        if code == extra_data["arrow_key_codes"]["left"]:
-            self.arena_grid.x += self.parent.player.speed
-        elif code == extra_data["arrow_key_codes"]["up"]:
-            self.arena_grid.y -= self.parent.player.speed
-        elif code == extra_data["arrow_key_codes"]["right"]:
-            self.arena_grid.x -= self.parent.player.speed
-        elif code == extra_data["arrow_key_codes"]["down"]:
-            self.arena_grid.y += self.parent.player.speed
+        if code in self.pressed_btns:
+            return
+        if not self.pressed_btns:
+            self.pressed_btns.append(code)
+            movement_thread = Thread(target=self.movement_tracker, daemon=True, args=(code,))
+            movement_thread.start()
+
+        else:
+            self.pressed_btns.append(code)
+
+    def stop_movement(self, instance, keyboard, code):
+        self.pressed_btns.remove(code)
+
 
 
     def on_size(self, *args):
