@@ -1,6 +1,7 @@
 {"hamsterdam": {"dimensions": ["2,2,2,2",
                                "2,2,2,2",
                                "2,2,0,2",
-"2,2,2,2"],
+                               "2,2,2,2"],
+                "weapon_positions": {"2":  "Ak"},
                 "spawn_positions": [0, 6]}
 }
