@@ -2,6 +2,6 @@
                                "2,2,2,2",
                                "2,2,0,2",
                                "2,2,2,2"],
-                "weapon_positions": {"2":  "Ak"},
+                "weapon_positions": {"2":  "ak"},
                 "spawn_positions": [0, 6]}
 }
