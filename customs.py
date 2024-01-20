@@ -109,6 +109,9 @@ class CustomWidget(BoxLayout):
         self.clock_vars[var][1] = val
 
 
+class HealthBar(BoxLayout):
+    pass
+
 class SignUpForm(CustomWidget):
     def submit_form(self, *args):
         if self.ids.pwd.text != self.ids.conf_pwd.text:
@@ -138,7 +141,6 @@ class SignUpForm(CustomWidget):
         except Exception as e:
             print(e)
             self.set_clock_watch_var("load_status", "fail")
-
 
 
 
@@ -239,24 +241,30 @@ class Weapon(Image):
         self.respawn_time = 15
         self.attacking = False
         self.source = f"assets/mains/{self.name}.png"
-        if self.name != "fist":
-            self.player_motion_skin = f"assets/anims/{self.name}.gif"
-        else:
-            self.player_motion_skin = "assets/mains/sprite.png"
 
     def check_pickup_proximity(self):
-        if self.collide_widget(screen_pointers["gs"].player):
+        if (self.collide_widget(screen_pointers["gs"].player) and not
+        self.name == screen_pointers["gs"].player.current_weapon.name):
             if "trans" not in self.source:
                 self.source = "assets/mains/trans.png"
                 Clock.schedule_once(self.respawn, self.respawn_time)
                 screen_pointers["gs"].player.current_weapon = self
-
+                #screen_pointers["gs"].player.ids.body.source = f"assets/anims/{self.name}.gif"
                 return True
 
         return False
     def set_false_pos_hint(self):
         self.false_pos_hint[0] = self.x/self.parent.width
         self.false_pos_hint[1] = self.y / self.parent.height
+
+    def set_motion_events(self):
+        if self.name != "fist":
+            screen_pointers["gs"].player.ids.body.source = f"assets/anims/moving_{self.name}.gif"
+
+    def stop_motion_events(self):
+        if self.name != "fist":
+            screen_pointers["gs"].player.ids.body.source = f"assets/anims/{self.name}.gif"
+
 
     def on_size(self, *args):
         self.x = self.false_pos_hint[0] * self.parent.width
@@ -346,7 +354,9 @@ class RoundManager:
             self.master = screen_pointers["gs"]
             self.current_arena = Arena(self, self.map)
             self.master.add_widget(self.current_arena)
-            self.current_arena.pos_hint = {"center": (.5, .5)}
+            self.master.health_bar = HealthBar()
+            self.master.add_widget(self.master.health_bar)
+            #self.current_arena.pos_hint = {"center": (.5, .5)}
         def _spawn(dt):
             for player in self.players:
                 self.current_arena.spawn_player(player)
@@ -362,7 +372,7 @@ class RoundManager:
 
 
         Clock.schedule_once(sub, .8)
-        Clock.schedule_once(_spawn, 1.3)
+        Clock.schedule_once(_spawn, 1.5)
 
     def finish_round(self):
         pass
@@ -385,7 +395,6 @@ class RoundManager:
             PushMatrix()
             player.parent.rotation = Rotate(angle=new_angle, origin=player.center, axis=(0, 0, 1))
 
-
         with player.canvas.after:
             PopMatrix()
 
@@ -405,7 +414,6 @@ class Arena(FloatLayout):
         self.dimensions = dimensions_path
         self.kivy_thread_instructions = []
         self.master = master
-        self.walk_anim_altered = False
         self.weapons = []
         self.arena_pieces = []
         self.arena_grid = GridLayout()
@@ -446,11 +454,12 @@ class Arena(FloatLayout):
 
         Clock.schedule_once(set_center, .1)
     def spawn_player(self, player):
+
         spawn_point = self.arena_info["spawn_positions"][0]
         spawn_pos = list(self.arena_grid.children[spawn_point].pos)
         player.pos_hint = {"center": (.5, .5)}
         self.parent.add_widget(player)
-        player.pos = spawn_pos
+        self.pos = spawn_pos
         for key, val in self.arena_info["weapon_positions"].items():
             wep_spawn_pos = list(self.arena_grid.children[int(key)].center)
             weapon = Weapon(val, pos=(wep_spawn_pos),
@@ -462,32 +471,16 @@ class Arena(FloatLayout):
 
     def movement_tracker(self, code, *args):
         while self.pressed_btns:
-            move_funcs = []
-
-            if not self.parent.player.current_weapon.name == "fist" and not self.walk_anim_altered:
-                self.walk_anim_altered = True
-                self.parent.player.ids.body.source = self.parent.player.current_weapon.player_motion_skin
-
-            def mover(for_width=True, increment=True):
-                self.parent.player.rotation.angle = 0
-                if for_width:
-                    if increment:
-                        screen_pointers["gs"].player.x += self.parent.player.speed
-                    else:
-                        screen_pointers["gs"].player.x -= self.parent.player.speed
-                else:
-                    if increment:
-                        screen_pointers["gs"].player.y += self.parent.player.speed
-                    else:
-                        screen_pointers["gs"].player.y -= self.parent.player.speed
-
-                self.parent.player.rotation.angle = self.master.angle
+            def serve_main_thread():
+                self.parent.player.rotation.origin = self.parent.player.center
 
             if extra_data["arrow_key_codes"]["left"] in self.pressed_btns:
                 if self.parent.player.x >= self.arena_grid.x:
                     self.arena_grid.x += self.parent.player.speed
                     for weapon in self.weapons:
                         weapon.x += self.parent.player.speed
+
+                    #screen_pointers["gs"].player.x -= self.parent.player.speed
 
 
             if extra_data["arrow_key_codes"]["up"] in self.pressed_btns:
@@ -496,11 +489,14 @@ class Arena(FloatLayout):
                     for weapon in self.weapons:
                         weapon.y -= self.parent.player.speed
 
+                   # screen_pointers["gs"].player.y += self.parent.player.speed
+
             if extra_data["arrow_key_codes"]["right"] in self.pressed_btns:
                 if self.parent.player.x + self.parent.player.width <= self.arena_grid.x + self.arena_grid.width:
                     self.arena_grid.x -= self.parent.player.speed
                     for weapon in self.weapons:
                         weapon.x -= self.parent.player.speed
+                    #screen_pointers["gs"].player.x += self.parent.player.speed
 
 
             if extra_data["arrow_key_codes"]["down"] in self.pressed_btns:
@@ -508,19 +504,21 @@ class Arena(FloatLayout):
                     self.arena_grid.y += self.parent.player.speed
                     for weapon in self.weapons:
                         weapon.y += self.parent.player.speed
+                    #screen_pointers["gs"].player.y -= self.parent.player.speed
 
+            #self.kivy_thread_instructions.append(serve_main_thread)
 
             for weapon in self.weapons:
                 weapon.set_false_pos_hint()
                 if weapon.check_pickup_proximity():
                     break
 
-            self.kivy_thread_instructions += move_funcs
-
             time.sleep(FPS)
-        self.parent.player.ids.body.source = "assets/mains/sprite.png"
-        self.walk_anim_altered = False
 
+    def move_on_kivy_thread(self, *args):
+        has_executed_one = False
+        if has_executed_one and not self.kivy_thread_instructions:
+            Clock.unschedule(self.move_on_kivy_thread)
 
 
     def move_player(self, *args):
@@ -531,12 +529,16 @@ class Arena(FloatLayout):
             self.pressed_btns.append(code)
             movement_thread = Thread(target=self.movement_tracker, daemon=True, args=(code,))
             movement_thread.start()
+            self.parent.player.current_weapon.set_motion_events()
+            #Clock.schedule_interval(self.move_on_kivy_thread, FPS)
 
         else:
             self.pressed_btns.append(code)
 
     def stop_movement(self, instance, keyboard, code):
         self.pressed_btns.remove(code)
+        if not self.pressed_btns:
+            self.parent.player.current_weapon.stop_motion_events()
 
 
 
