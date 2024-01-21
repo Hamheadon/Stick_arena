@@ -270,11 +270,18 @@ class Weapon(Image):
         self.x = self.false_pos_hint[0] * self.parent.width
         self.y = self.false_pos_hint[1] * self.parent.height
 
+    def cease_fire(self, *args):
+        self.attacking = False
+
+
     def fire(self):
+        self.attacking = True
+    def _fire(self):
         while self.attacking:
             (screen_pointers["ls"].arena_manager.new_data_funcs.
              append(partial(screen_pointers["ls"].arena_manager.check_attack_contact,
                             Window.mouse_pos, weapons_info[self.name]["damage"])))
+            time.sleep(weapons_info[self.name]["rate"])
 
 
     def respawn(self, *args):
@@ -307,8 +314,8 @@ class Player(BoxLayout):
         self.center = self.center
         self.size = self.size
 
-    def pick_up_weapon(self, weapon_name: str):
-        self.current_weapon = Weapon(weapon_name)
+    def get_shot_by(self, name):
+        pass
 
 
 class ArenaPiece(FloatLayout):
@@ -339,14 +346,21 @@ class RoundManager:
         self.players = []
         self.repeat = repeat
         self.rotate_func = self.rotate_player
+        self.server_data = {}
         self.keyboard_release_func = None
         self.angle = 0
         self.players_scores = {}
         self.current_arena = None
         self.angle = 0
 
-    def check_attack_contact(self, x, y, damage, opp_positions):
+    def check_attack_contact(self, x, y, damage):
         slope = (y - screen_pointers["gs"].player.center_y)/(x - screen_pointers["gs"].player.center_x)
+        b = y - slope * x
+        players_in_range = []
+        for player in self.players:
+            for x_pos in range(player["x"], screen_pointers["gs"].player.width):
+                pass
+
 
 
     def set_up_round(self):
