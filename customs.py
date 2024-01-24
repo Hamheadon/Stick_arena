@@ -377,6 +377,7 @@ class RoundManager:
                 self.current_arena.spawn_player(player)
 
             self.current_arena.spawn_player(app_pointer[0].root.screens[-1].player)
+            self.current_arena.spawn_player(self.current_arena.dummy_player, False, True)
             self.bind_func = self.current_arena.move_player
             self.keyboard_release_func = self.current_arena.stop_movement
             Window.bind(on_key_down=self.bind_func)
@@ -427,8 +428,10 @@ class Arena(FloatLayout):
         # pos_hint will always be .5, .5 to center
         super().__init__()
         self.dimensions = dimensions_path
+        self.dummy_player = Player("Dam", pos_hint={"center": (.21, .7)})
         self.kivy_thread_instructions = []
         self.master = master
+        self.spawned_once = False
         self.weapons = []
         self.arena_pieces = []
         self.arena_grid = GridLayout()
@@ -468,20 +471,33 @@ class Arena(FloatLayout):
             self.arena_grid.center = self.center
 
         Clock.schedule_once(set_center, .1)
-    def spawn_player(self, player):
+    def spawn_player(self, player, personal=True, new=True):
 
         spawn_point = self.arena_info["spawn_positions"][0]
-        spawn_pos = list(self.arena_grid.children[spawn_point].pos)
-        player.pos_hint = {"center": (.5, .5)}
-        self.parent.add_widget(player)
-        self.pos = spawn_pos
-        for key, val in self.arena_info["weapon_positions"].items():
-            wep_spawn_pos = list(self.arena_grid.children[int(key)].center)
-            weapon = Weapon(val, pos=(wep_spawn_pos),
-                            size_hint=(.1, .1))
-            self.parent.add_widget(weapon)
-            weapon.set_false_pos_hint()
-            self.weapons.append(weapon)
+        spawn_pos = list(self.arena_grid.children[spawn_point].center)
+        if personal:
+            player.pos_hint = {"center": (.5, .5)}
+            self.center = spawn_pos
+            if new:
+                self.parent.add_widget(player)
+
+        else:
+            if new:
+                self.add_widget(player)
+            player.pos_hint = {"center": ((spawn_pos[0] - self.x)/self.width, (spawn_pos[1] - self.y)/self.height)}
+            print(player.parent)
+            print("hey", player.pos_hint)
+
+        if not self.spawned_once:
+            for key, val in self.arena_info["weapon_positions"].items():
+                wep_spawn_pos = list(self.arena_grid.children[int(key)].center)
+                weapon = Weapon(val, pos=(wep_spawn_pos),
+                                size_hint=(.1, .1))
+                self.parent.add_widget(weapon)
+                weapon.set_false_pos_hint()
+                self.weapons.append(weapon)
+
+            self.spawned_once = True
 
 
     def movement_tracker(self, code, *args):
@@ -491,7 +507,9 @@ class Arena(FloatLayout):
 
             if extra_data["arrow_key_codes"]["left"] in self.pressed_btns:
                 if self.parent.player.x >= self.arena_grid.x:
-                    self.arena_grid.x += self.parent.player.speed
+                    x = self.center[0]
+
+                    self.x += self.parent.player.speed
                     for weapon in self.weapons:
                         weapon.x += self.parent.player.speed
 
@@ -500,7 +518,7 @@ class Arena(FloatLayout):
 
             if extra_data["arrow_key_codes"]["up"] in self.pressed_btns:
                 if self.parent.player.y + self.parent.player.height <= self.arena_grid.y + self.arena_grid.height:
-                    self.arena_grid.y -= self.parent.player.speed
+                    self.y -= self.parent.player.speed
                     for weapon in self.weapons:
                         weapon.y -= self.parent.player.speed
 
@@ -508,7 +526,7 @@ class Arena(FloatLayout):
 
             if extra_data["arrow_key_codes"]["right"] in self.pressed_btns:
                 if self.parent.player.x + self.parent.player.width <= self.arena_grid.x + self.arena_grid.width:
-                    self.arena_grid.x -= self.parent.player.speed
+                    self.x -= self.parent.player.speed
                     for weapon in self.weapons:
                         weapon.x -= self.parent.player.speed
                     #screen_pointers["gs"].player.x += self.parent.player.speed
@@ -516,7 +534,7 @@ class Arena(FloatLayout):
 
             if extra_data["arrow_key_codes"]["down"] in self.pressed_btns:
                 if self.parent.player.y >= self.arena_grid.y:
-                    self.arena_grid.y += self.parent.player.speed
+                    self.y += self.parent.player.speed
                     for weapon in self.weapons:
                         weapon.y += self.parent.player.speed
                     #screen_pointers["gs"].player.y -= self.parent.player.speed
