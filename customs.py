@@ -278,8 +278,9 @@ class Weapon(Image):
         self.attacking = True
     def _fire(self):
         while self.attacking:
+
             (screen_pointers["ls"].arena_manager.new_data_funcs.
-             append(partial(screen_pointers["ls"].arena_manager.check_attack_contact,
+             insert(0, partial(screen_pointers["ls"].arena_manager.check_attack_contact,
                             Window.mouse_pos, weapons_info[self.name]["damage"])))
             time.sleep(weapons_info[self.name]["rate"])
 
@@ -393,7 +394,7 @@ class RoundManager:
 
     def listen_for_round_data(self, *args):
         new_data = get_response(server_socket, True, dict)
-        for func in self.new_data_funcs:
+        for func in self.new_data_funcs[::-1]:
             func()
             self.new_data_funcs.remove(func)
 
