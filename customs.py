@@ -4,7 +4,7 @@ import sys
 import time
 from functools import partial
 from math import tan, degrees, atan2
-from threading import Thread
+from threading import Thread, Lock
 
 from kivy.uix.label import Label
 
@@ -342,6 +342,7 @@ class RoundManager:
         self.is_new = True
         self.map = map
         self.master = None
+        self.model_player_size = None
         self.new_data_funcs = []
         self.own_player = None
         self.players = []
@@ -377,7 +378,11 @@ class RoundManager:
                 self.current_arena.spawn_player(player)
 
             self.current_arena.spawn_player(app_pointer[0].root.screens[-1].player)
+            self.model_player_size = screen_pointers["gs"].player.size
             self.current_arena.spawn_player(self.current_arena.dummy_player, False, True)
+            model_hint_y = self.model_player_size[0]/self.current_arena.height
+            model_hint_x = self.model_player_size[1]/self.current_arena.width
+            self.current_arena.spawn_player.size_hint = model_hint_y, model_hint_x
             self.bind_func = self.current_arena.move_player
             self.keyboard_release_func = self.current_arena.stop_movement
             Window.bind(on_key_down=self.bind_func)
@@ -434,13 +439,14 @@ class Arena(FloatLayout):
         self.spawned_once = False
         self.weapons = []
         self.arena_pieces = []
-        self.arena_grid = GridLayout()
+        self.arena_grid = GridLayout(pos_hint={"center": (.5, .5)})
         self.blocking_pieces = []
         self.pressed_btns = []
         self.arena_info = None
         self.inited = False
         self.player_trace_line = None
         self.collision_equation: str = ""
+        self.lock = Lock()
         #TODO find size_hint from uniform length of dim_strings(width) and length of DS array(height)
 
     def set_up_dims(self):
@@ -502,14 +508,19 @@ class Arena(FloatLayout):
 
     def movement_tracker(self, code, *args):
         while self.pressed_btns:
+            self.lock.acquire()
             def serve_main_thread():
                 self.parent.player.rotation.origin = self.parent.player.center
 
+            x = self.center[0]
+            y = self.center[1]
             if extra_data["arrow_key_codes"]["left"] in self.pressed_btns:
                 if self.parent.player.x >= self.arena_grid.x:
-                    x = self.center[0]
-
-                    self.x += self.parent.player.speed
+                    x += self.parent.player.speed
+                    x_hint = x/Window.width
+                    y_hint = self.pos_hint["center"][1]
+                    self.pos_hint["center"] = (x_hint, y_hint)
+                   # self.x += self.parent.player.speed
                     for weapon in self.weapons:
                         weapon.x += self.parent.player.speed
 
@@ -518,7 +529,10 @@ class Arena(FloatLayout):
 
             if extra_data["arrow_key_codes"]["up"] in self.pressed_btns:
                 if self.parent.player.y + self.parent.player.height <= self.arena_grid.y + self.arena_grid.height:
-                    self.y -= self.parent.player.speed
+                    y -= self.parent.player.speed
+                    y_hint = y / Window.height
+                    x_hint = self.pos_hint["center"][0]
+                    self.pos_hint["center"] = (x_hint, y_hint)
                     for weapon in self.weapons:
                         weapon.y -= self.parent.player.speed
 
@@ -526,7 +540,10 @@ class Arena(FloatLayout):
 
             if extra_data["arrow_key_codes"]["right"] in self.pressed_btns:
                 if self.parent.player.x + self.parent.player.width <= self.arena_grid.x + self.arena_grid.width:
-                    self.x -= self.parent.player.speed
+                    x -= self.parent.player.speed
+                    x_hint = x / Window.width
+                    y_hint = self.pos_hint["center"][1]
+                    self.pos_hint["center"] = (x_hint, y_hint)
                     for weapon in self.weapons:
                         weapon.x -= self.parent.player.speed
                     #screen_pointers["gs"].player.x += self.parent.player.speed
@@ -534,7 +551,10 @@ class Arena(FloatLayout):
 
             if extra_data["arrow_key_codes"]["down"] in self.pressed_btns:
                 if self.parent.player.y >= self.arena_grid.y:
-                    self.y += self.parent.player.speed
+                    y += self.parent.player.speed
+                    y_hint = y / Window.height
+                    x_hint = self.pos_hint["center"][0]
+                    self.pos_hint["center"] = (x_hint, y_hint)
                     for weapon in self.weapons:
                         weapon.y += self.parent.player.speed
                     #screen_pointers["gs"].player.y -= self.parent.player.speed
@@ -545,7 +565,7 @@ class Arena(FloatLayout):
                 weapon.set_false_pos_hint()
                 if weapon.check_pickup_proximity():
                     break
-
+            self.lock.release()
             time.sleep(FPS)
 
     def move_on_kivy_thread(self, *args):
