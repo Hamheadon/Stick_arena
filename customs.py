@@ -356,6 +356,7 @@ class RoundManager:
         self.angle = 0
 
     def check_attack_contact(self, x, y, damage):
+        print("Shots fired")
         slope = (y - screen_pointers["gs"].player.center_y)/(x - screen_pointers["gs"].player.center_x)
         b = y - slope * x
         players_in_range = []
@@ -382,7 +383,8 @@ class RoundManager:
             self.current_arena.spawn_player(self.current_arena.dummy_player, False, True)
             model_hint_y = self.model_player_size[0]/self.current_arena.height
             model_hint_x = self.model_player_size[1]/self.current_arena.width
-            self.current_arena.spawn_player.size_hint = model_hint_y, model_hint_x
+            self.current_arena.dummy_player.size_hint = model_hint_y, model_hint_x
+
             self.bind_func = self.current_arena.move_player
             self.keyboard_release_func = self.current_arena.stop_movement
             Window.bind(on_key_down=self.bind_func)
@@ -502,6 +504,7 @@ class Arena(FloatLayout):
                 self.parent.add_widget(weapon)
                 weapon.set_false_pos_hint()
                 self.weapons.append(weapon)
+
 
             self.spawned_once = True
 
