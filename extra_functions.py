@@ -6,9 +6,10 @@ import time
 import pyrebase
 
 HEADER_LENGTH = 64
-FPS = 1/60
+FPS = 1/30
 screen_pointers = {}
-weapons_info = {"ak": {"rate": .5, "weight": 3, "damage": 20}}
+weapons_info = {"ak": {"rate": .5, "weight": 3, "damage": 20},
+                "fist": {"rate": .5, "weight": 0, "damage": 4}}
 active_players = {}
 DATA_FILE = "extra_data.json"
 encode_format = "utf-8"
