@@ -54,7 +54,7 @@ def save_data():
         json.dump(extra_data, stored_data_file)
 
 
-def send_command(msg, needs_response=False, response_type=str):
+def send_command(msg, needs_response=False, response_type=str, continuous_response=False):
     message = msg.encode("utf-8")
     msg_length = len(message)
     send_length = str(msg_length).encode("utf-8")
@@ -66,7 +66,7 @@ def send_command(msg, needs_response=False, response_type=str):
         server_socket.send(send_length + (b" " * (HEADER_LENGTH - len(send_length))))
         server_socket.send(message)
         if needs_response:
-            return 200, get_response(server_socket, False, response_type)
+            return 200, get_response(server_socket, continuous_response, response_type)
     return connection_attempt
 
 def get_response(data_socket: socket.socket, continuous_response=False, response_type=str,

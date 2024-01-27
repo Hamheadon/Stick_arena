@@ -25,7 +25,7 @@ class StickApp(App):
 
     def build(self):
         self.root = StickManager()
-        self.set_current_screen("ls")
+        self.set_current_screen("ss")
         return self.root
 
 

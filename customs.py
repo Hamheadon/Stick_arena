@@ -2,6 +2,7 @@ import json
 import random
 import sys
 import time
+import traceback
 from functools import partial
 from math import tan, degrees, atan2
 from threading import Thread, Lock
@@ -59,6 +60,7 @@ def str_to_class(class_name):
     return class_obj
 
 
+
 class StickInput(TextInput):
     hint_msg = StringProperty("")
 
@@ -111,36 +113,86 @@ class CustomWidget(BoxLayout):
     def set_clock_watch_var(self, var, val):
         self.clock_vars[var][1] = val
 
+class StartPageForm(CustomWidget):
+    def __init__(self, master, post_success_msg="Welcome", post_failure_msg="Something went wrong", **kwargs):
+        super().__init__(master, **kwargs)
+        self.post_success_msg = post_success_msg
+        self.post_failure_msg = post_failure_msg
+
+    def primary_validations_satisfied(self, *args):
+        if not self.ids.username.text:
+            self.ids.login_status.text = "Please enter a username!"
+            return False
+        elif not self.ids.pwd.text:
+            self.ids.login_status.text = "Please enter a password!"
+            return False
+        return True
+
+    def prepare_server_clock_vars(self):
+        self.command_future_clock({"funcs_array": [lambda: app_pointer[0].set_current_screen("ls")],
+                                   "clock_var": "load_status",
+                                   "completion_var": "loaded",
+                                   "fail_msgs": "Whoops, a non-obvious problem occurred",
+                                   "fail_wid": self.ids.form_status})
+        Thread(target=self.call_server, daemon=True).start()
+
+    def call_server(self):
+        pass
+
+    def submit_form(self):
+        pass
 
 class HealthBar(BoxLayout):
     pass
 
-
-class SignUpForm(CustomWidget):
-    def submit_form(self, *args):
-        if self.ids.pwd.text != self.ids.conf_pwd.text:
-            self.ids.sign_up_status.text = "The passwords do not match"
-        elif not self.ids.username.text:
-            self.ids.sign_up_status.text = "Please enter a username!"
-        else:
-            self.ids.sign_up_status.text = "One second"
-            self.command_future_clock({"funcs_array": [lambda: app_pointer[0].set_current_screen("ls")],
-                                       "clock_var": "load_status",
-                                       "completion_var": "loaded",
-                                       "fail_msgs": "Whoops, a non-obvious problem occurred",
-                                       "fail_wid": self.ids.sign_up_status})
-            Thread(target=self.call_server, daemon=True).start()
+class LoginForm(StartPageForm):
 
     def call_server(self, *args):
+        self.ids.form_status.text = "One sec..."
+
+        try:
+            post_request = send_command(f"job:sign_in,name:{self.ids.username.text},password:{self.ids.pwd.text}",
+                                        True, dict)
+            if type(post_request) is tuple:
+                self.ids.sign_up_status.text = "Successfully logged in!"
+                self.set_clock_watch_var("load_status", "loaded")
+                self.master.do_login_setups()
+
+            else:
+                self.ids.form_status.text = "The server is inactive right now"
+        except Exception as e:
+            print(f"Excepting {traceback.format_exc()}")
+            self.set_clock_watch_var("load_status", "fail")
+
+    def submit_form(self):
+        if not self.primary_validations_satisfied():
+            return
+        self.prepare_server_clock_vars()
+
+
+class SignUpForm(StartPageForm):
+    def submit_form(self, *args):
+        if not self.primary_validations_satisfied():
+            return
+        elif self.ids.pwd.text != self.ids.conf_pwd.text:
+            self.ids.sign_up_status.text = "The passwords do not match"
+
+        else:
+            self.ids.form_status.text = "One second"
+            self.prepare_server_clock_vars()
+
+
+    def call_server(self, *args):
+
         try:
             post_request = send_command(f"job:sign_up,name:{self.ids.username.text},password:{self.ids.pwd.text}",
                                         True, dict)
             if type(post_request) is tuple:
                 self.ids.sign_up_status.text = "Successfully signed up!"
                 self.set_clock_watch_var("load_status", "loaded")
-                app_pointer[0].set_current_screen("ls")
+                self.master.do_login_setups()
             else:
-                self.ids.sign_up_status.text = "The server is inactive right now"
+                self.ids.form_status.text = "The server is inactive right now"
         except Exception as e:
             print(e)
             self.set_clock_watch_var("load_status", "fail")

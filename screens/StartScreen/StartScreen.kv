@@ -1,5 +1,33 @@
 #: set c_hint {"center": (.5, .5)}
 #: import partial functools.partial
+
+<LoginForm>:
+    pos_hint: {"center": (-1, .5)}
+    size_hint: .61, .55
+    DialogLay:
+        BoxLayout:
+            pos_hint: {"center": (.5, .64)}
+            size_hint: .64, .68
+            orientation: "vertical"
+            spacing: "12dp"
+            Label:
+                id: form_status
+                text: "Enter your details"
+                size_hint: .97, .11
+            StickInput:
+                id: username
+                size_hint: 1, .11
+                hint_msg: "Username"
+            StickInput:
+                id: pwd
+                size_hint: 1, .11
+                hint_msg: "Password"
+        Button:
+            text: "Submit"
+            size_hint: .45, .11
+            pos_hint: {"center": (.5, .11)}
+            on_release: root.submit_form()
+
 <StartScreen>:
     name: "ss"
     StickImage:
@@ -12,6 +40,7 @@
         StickButton:
             text: "Sign in"
             master: root
+            release_func: partial(root.raise_widget, "LoginForm")
 
         StickButton:
             text: "Sign up"
@@ -20,6 +49,7 @@
         StickButton:
             text: "How to play"
             master: root
+
 
 <SignUpForm>:
     pos_hint: {"center": (-1, .5)}
@@ -31,7 +61,7 @@
             orientation: "vertical"
             spacing: "12dp"
             Label:
-                id: sign_up_status
+                id: form_status
                 text: "Enter your details"
                 size_hint: .97, .11
             StickInput:

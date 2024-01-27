@@ -7,7 +7,7 @@ import time
 from threading import Thread
 import pyrebase
 players_online = {}
-active_games = []
+active_games = {}
 DISCONNECT_MESSAGE = "leave"
 
 def connect_to_fire():
@@ -77,16 +77,19 @@ def sign_up(creds: dict, conn: socket.socket, addr=None, *args):
     with open("players.json", "w") as players_file:
         json.dump(current_players, players_file)
     players_online[creds["name"]] = fresh_stats
+    send_lobby_data(conn, creds)
 
+def send_data(conn: socket.socket, data: dict):
+    bytes_data = pickle.dumps(data)
+    data_len = len(bytes_data)
+    send_length = str(data_len).encode(FORMAT)
+    conn.send(send_length + (b" " * (HEADER - len(send_length))))
+    conn.send(bytes_data)
 
+def send_lobby_data(conn: socket.socket, creds: dict, *args):
     while creds["still_connected"]:
-        lobby_data = pickle.dumps({"players": players_online, "games": active_games})
-        data_length = len(lobby_data)
-        send_length = str(data_length).encode(FORMAT)
-        conn.send(send_length + (b" " * (HEADER - len(send_length))))
-        conn.send(lobby_data)
-        time.sleep(1.5)
-
+        lobby_data = {"players": players_online, "games": active_games}
+        send_data(conn, lobby_data)
 
 
 def sign_in(creds: dict):
@@ -95,9 +98,11 @@ def sign_in(creds: dict):
 def update_game_position(player, game_id, new_game_position):
     pass
 
-def start_game():
+def join_game(creds: dict, *args):
     pass
 
+def start_game(info: dict, *args):
+    pass
 
 FORMAT = "utf-8"
 HEADER = 64
