@@ -57,13 +57,30 @@ def handle_client(conn, addr, *args):
         jobs_data[job] = command_info
         thread = threading.Thread(target=job_func, args=(command_info, conn, addr))
         thread.start()
-        print(f"[Data] {command_info}")
 
     for val in jobs_data.values():
         val["still_connected"] = False
     conn.close()
     print(f"finished serving {conn}")
         # "job:sign_up,name:josh,password:cross,status:signup"
+
+def sign_in(creds: dict, conn: socket.socket, *args):
+    print("attempting sign in...")
+    curr_players = {}
+    with open("players.json", "r") as players_file:
+        curr_players = json.load(players_file)
+
+    if creds["name"] in curr_players:
+        if creds["password"] == curr_players[creds["name"]]["password"]:
+            send_data({"success_message": "Successfully signed up! Welcome", "status": "success"}, conn)
+            players_online.update({creds["name"]: curr_players[creds["name"]]})
+            send_lobby_data(conn, creds)
+        else:
+            send_data({"fail_message": "The password is incorrect", "status": "fail"}, conn)
+    else:
+        send_data({"fail_message": "That username does not exist", "status": "fail"}, conn)
+
+    print(f"{creds['name']} has joined the lobby")
 
 def sign_up(creds: dict, conn: socket.socket, addr=None, *args):
     print(f"{creds['name']} has become one of us")
@@ -79,21 +96,22 @@ def sign_up(creds: dict, conn: socket.socket, addr=None, *args):
     players_online[creds["name"]] = fresh_stats
     send_lobby_data(conn, creds)
 
-def send_data(conn: socket.socket, data: dict):
+def send_data(data: dict, conn: socket.socket, *args):
     bytes_data = pickle.dumps(data)
     data_len = len(bytes_data)
     send_length = str(data_len).encode(FORMAT)
+    print(f"sending to {conn.getsockname()}")
     conn.send(send_length + (b" " * (HEADER - len(send_length))))
     conn.send(bytes_data)
 
 def send_lobby_data(conn: socket.socket, creds: dict, *args):
     while creds["still_connected"]:
         lobby_data = {"players": players_online, "games": active_games}
-        send_data(conn, lobby_data)
+        send_data(lobby_data, conn)
+        time.sleep(1)
 
 
-def sign_in(creds: dict):
-    print(f"{creds['name']} has joined the lobby")
+
 
 def update_game_position(player, game_id, new_game_position):
     pass

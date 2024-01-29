@@ -129,7 +129,7 @@ class StartPageForm(CustomWidget):
         return True
 
     def prepare_server_clock_vars(self):
-        self.command_future_clock({"funcs_array": [lambda: app_pointer[0].set_current_screen("ls")],
+        self.command_future_clock({"funcs_array": [lambda: screen_pointers["ss"].do_login_setups()],
                                    "clock_var": "load_status",
                                    "completion_var": "loaded",
                                    "fail_msgs": "Whoops, a non-obvious problem occurred",
@@ -154,9 +154,11 @@ class LoginForm(StartPageForm):
             post_request = send_command(f"job:sign_in,name:{self.ids.username.text},password:{self.ids.pwd.text}",
                                         True, dict)
             if type(post_request) is tuple:
-                self.ids.sign_up_status.text = "Successfully logged in!"
-                self.set_clock_watch_var("load_status", "loaded")
-                self.master.do_login_setups()
+                if post_request[1]["status"] == "success":
+                    self.ids.form_status.text = post_request[1]["success_message"]
+                    self.set_clock_watch_var("load_status", "loaded")
+                else:
+                    self.ids.form_status.text = post_request[1]["fail_message"]
 
             else:
                 self.ids.form_status.text = "The server is inactive right now"
@@ -188,9 +190,12 @@ class SignUpForm(StartPageForm):
             post_request = send_command(f"job:sign_up,name:{self.ids.username.text},password:{self.ids.pwd.text}",
                                         True, dict)
             if type(post_request) is tuple:
-                self.ids.sign_up_status.text = "Successfully signed up!"
-                self.set_clock_watch_var("load_status", "loaded")
-                self.master.do_login_setups()
+                if post_request[1]["status"] == "success":
+                    self.ids.form_status.text = post_request[1]["success_message"]
+                    self.set_clock_watch_var("load_status", "loaded")
+                else:
+                    self.ids.form_status.text = post_request[1]["fail_message"]
+
             else:
                 self.ids.form_status.text = "The server is inactive right now"
         except Exception as e:

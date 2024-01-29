@@ -16,6 +16,9 @@ class LobbyScreen(StickScreen):
 
     def update_data_ui(self, *args):
         self.ids.games_list.clear_widgets()
+        if not self.lobby_data:
+            return
+        print(f"Lobby data: {self.lobby_data}")
         names = list(self.lobby_data["games"].keys())
         names.sort()
         for name in names:

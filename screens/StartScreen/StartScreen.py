@@ -8,5 +8,6 @@ class StartScreen(StickScreen):
 
     def do_login_setups(self, *args):
         app_pointer[0].set_current_screen("ls")
-        get_response(server_socket, True, dict, screen_pointers["ls"], "lobby_data")
+        Thread(target=get_response,  args=(server_socket, True, dict, screen_pointers["ls"], "lobby_data"),
+               daemon=True).start()
         Clock.schedule_interval(screen_pointers["ls"].update_data_ui, 2)

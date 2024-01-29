@@ -69,7 +69,7 @@ def send_command(msg, needs_response=False, response_type=str, continuous_respon
             return 200, get_response(server_socket, continuous_response, response_type)
     return connection_attempt
 
-def get_response(data_socket: socket.socket, continuous_response=False, response_type=str,
+def get_response(data_socket: socket.socket=None, continuous_response=False, response_type=str,
                  holding_obj=None, data_attr_name=None):
     """
 
@@ -80,6 +80,9 @@ def get_response(data_socket: socket.socket, continuous_response=False, response
     :param data_attr_name:
     :return:
     """
+    if not data_socket and not server_socket:
+        connect_to_server()
+    data_socket = server_socket
     def handle_response():
         actual_response_data = None
         first_response = server_socket.recv(HEADER_LENGTH)
