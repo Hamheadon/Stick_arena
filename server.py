@@ -125,7 +125,7 @@ def start_game(info: dict, *args):
 FORMAT = "utf-8"
 HEADER = 64
 PORT = 8080
-HOST = socket.gethostbyname(socket.gethostname())
+HOST = '10.9.105.19'
 
 ADDR = (HOST, PORT)
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -133,7 +133,7 @@ server.bind(ADDR)
 server.listen()
 server_is_active = True
 
-connect_to_fire().update({"server_addr": socket.gethostbyname(socket.gethostname())})
+connect_to_fire().update({"server_addr": HOST})
 print("Server has started")
 while server_is_active:
     conn, addr = server.accept()
