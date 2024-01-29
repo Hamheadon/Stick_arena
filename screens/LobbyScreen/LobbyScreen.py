@@ -19,7 +19,7 @@ class LobbyScreen(StickScreen):
         if not self.lobby_data:
             return
         print(f"Lobby data: {self.lobby_data}")
-        names = list(self.lobby_data["games"].keys())
+        names = list(self.lobby_data["players"].keys())
         names.sort()
         for name in names:
             self.ids.games_list.add_widget(Button(text=name, background_color=(0, 0, 0, 0), color=(1, 1, 1, 1)))
