@@ -177,7 +177,7 @@ class SignUpForm(StartPageForm):
         if not self.primary_validations_satisfied():
             return
         elif self.ids.pwd.text != self.ids.conf_pwd.text:
-            self.ids.sign_up_status.text = "The passwords do not match"
+            self.ids.form_status.text = "The passwords do not match"
 
         else:
             self.ids.form_status.text = "One second"

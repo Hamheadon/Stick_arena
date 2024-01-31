@@ -57,6 +57,7 @@ def handle_client(conn, addr, *args):
         jobs_data[job] = command_info
         thread = threading.Thread(target=job_func, args=(command_info, conn, addr))
         thread.start()
+        time.sleep(0.005)
 
     for val in jobs_data.values():
         val["still_connected"] = False
@@ -125,7 +126,7 @@ def start_game(info: dict, *args):
 FORMAT = "utf-8"
 HEADER = 64
 PORT = 8080
-HOST = '10.9.105.19'
+HOST = socket.gethostbyname(socket.gethostname())
 
 ADDR = (HOST, PORT)
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
